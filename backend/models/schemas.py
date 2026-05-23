@@ -5,7 +5,7 @@ class GenerateRequest(BaseModel):
     topic: str = Field(..., min_length=1)
     keywords: list[str] = Field(..., min_length=1)
     target_audience: str = Field(..., min_length=1)
-    call_to_action: str = Field(..., min_length=1, max_length=500)
+    call_to_action: str = Field(..., min_length=1, max_length=200)
 
 
 class LLMArticleOutput(BaseModel):

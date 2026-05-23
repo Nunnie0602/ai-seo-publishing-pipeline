@@ -46,8 +46,27 @@ http://localhost:8000
 
 ### GET /health
 
+預設回傳 HTML 頁面，顯示 `app`、`wordpress`、`llm` 三項狀態；若 `Accept` 含 `application/json` 則回傳 JSON。
+
+任一依賴（WordPress 或 LLM）非 `OK` 時 HTTP 狀態碼為 `503`。
+
 ```json
 {
-  "status": "ok"
+  "app": { "status": "OK" },
+  "wordpress": { "status": "OK" },
+  "llm": { "status": "OK" }
+}
+```
+
+錯誤範例：
+
+```json
+{
+  "app": { "status": "OK" },
+  "wordpress": {
+    "status": "ERROR",
+    "message": "WordPress credentials are not configured"
+  },
+  "llm": { "status": "OK" }
 }
 ```

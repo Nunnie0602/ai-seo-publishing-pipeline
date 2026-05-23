@@ -1,0 +1,38 @@
+{
+  "description": "前端表單、POST /generate 請求與 LLM 輸出欄位對照（與 models/schemas.py、frontend/src/services/api.js 一致）",
+  "cta_max_length": 200,
+  "frontend_form": {
+    "file": "mock_frontend_form.json",
+    "source": "SeoForm onSubmit → useGenerateArticle → api.generateArticle",
+    "fields": {
+      "topic": "string",
+      "keywords": "string[]",
+      "targetAudience": "string",
+      "callToAction": "string"
+    }
+  },
+  "api_generate_request": {
+    "file": "mock_generate_request.json",
+    "model": "GenerateRequest",
+    "fields": {
+      "topic": "string",
+      "keywords": "list[str]",
+      "target_audience": "string",
+      "call_to_action": "string"
+    }
+  },
+  "llm_output": {
+    "file": "mock_llm_article.json",
+    "model": "LLMArticleOutput",
+    "fields": {
+      "title": "string",
+      "content_html": "string"
+    }
+  },
+  "field_mapping_frontend_to_api": {
+    "topic": "topic",
+    "keywords": "keywords",
+    "targetAudience": "target_audience",
+    "callToAction": "call_to_action"
+  }
+}
