@@ -1,19 +1,17 @@
-const CTA_MAX_LENGTH = 200;
+import { CTA_MAX_LENGTH } from "../i18n/translations";
 
-export function validateSeoForm({ topic, keywords, callToAction }) {
+export { CTA_MAX_LENGTH };
+
+export function validateSeoForm(
+  { topic, keywords, callToAction },
+  { ctaMaxMessage } = {}
+) {
   const errors = {};
-
-  if (!topic?.trim()) {
-    errors.topic = "Topic is required.";
-  }
-
   const validKeywords = (keywords || []).filter((k) => k?.trim());
-  if (validKeywords.length === 0) {
-    errors.keywords = "Please enter at least one keyword.";
-  }
+  const cta = callToAction ?? "";
 
-  if (callToAction && callToAction.length > CTA_MAX_LENGTH) {
-    errors.callToAction = `Call to action must be ${CTA_MAX_LENGTH} characters or less.`;
+  if (cta.length > CTA_MAX_LENGTH && ctaMaxMessage) {
+    errors.callToAction = ctaMaxMessage;
   }
 
   return {
@@ -22,7 +20,7 @@ export function validateSeoForm({ topic, keywords, callToAction }) {
     normalized: {
       topic: topic?.trim() ?? "",
       keywords: validKeywords.map((k) => k.trim()),
-      callToAction: callToAction?.trim() ?? "",
+      callToAction: cta.trim(),
     },
   };
 }

@@ -1,10 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import Page from "./app/page";
+import { LanguageProvider } from "./i18n/LanguageContext";
 import "./index.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Page />
+    <LanguageProvider>
+      <Page />
+    </LanguageProvider>
   </StrictMode>
 );

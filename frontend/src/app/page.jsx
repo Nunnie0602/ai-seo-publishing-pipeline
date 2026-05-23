@@ -5,18 +5,25 @@ import LoadingPipeline from "../components/LoadingPipeline";
 import HtmlPreview from "../components/HtmlPreview";
 import ErrorAlert from "../components/ErrorAlert";
 import SuccessToast from "../components/SuccessToast";
+import { useLanguage } from "../i18n/LanguageContext";
 import { useGenerateArticle } from "../hooks/useGenerateArticle";
 
 export default function Page() {
+  const { t } = useLanguage();
+  const getDefaultErrorMessage = useCallback(
+    () => t.error.defaultMessage,
+    [t]
+  );
+
   const {
     loading,
     error,
     result,
-    pipelineSteps,
+    pipelineStepKeys,
     stepIndex,
     run,
     reset,
-  } = useGenerateArticle();
+  } = useGenerateArticle(getDefaultErrorMessage);
 
   const handleSubmit = useCallback(
     async (formData) => {
@@ -29,6 +36,9 @@ export default function Page() {
     [run]
   );
 
+  const showStatusMessages =
+    Boolean(error) || Boolean(result?.post_id || result?.draft_url);
+
   return (
     <Layout>
       <div className="page-grid">
@@ -37,13 +47,20 @@ export default function Page() {
         </section>
 
         <section className="page-grid__status">
-          <ErrorAlert message={error} onDismiss={reset} />
-          <LoadingPipeline steps={pipelineSteps} activeIndex={stepIndex} />
-          <SuccessToast
-            postId={result?.post_id}
-            draftUrl={result?.draft_url}
-            onDismiss={reset}
+          <LoadingPipeline
+            stepKeys={pipelineStepKeys}
+            activeIndex={stepIndex}
           />
+          {showStatusMessages && (
+            <div className="status-messages">
+              <ErrorAlert message={error} onDismiss={reset} />
+              <SuccessToast
+                postId={result?.post_id}
+                draftUrl={result?.draft_url}
+                onDismiss={reset}
+              />
+            </div>
+          )}
           <HtmlPreview
             title={result?.title}
             html={result?.preview_html}

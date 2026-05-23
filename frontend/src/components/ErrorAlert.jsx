@@ -1,4 +1,8 @@
+import { useLanguage } from "../i18n/LanguageContext";
+
 export default function ErrorAlert({ message, onDismiss }) {
+  const { t } = useLanguage();
+
   if (!message) return null;
 
   return (
@@ -6,7 +10,7 @@ export default function ErrorAlert({ message, onDismiss }) {
       <p>{message}</p>
       {onDismiss && (
         <button type="button" className="alert__dismiss" onClick={onDismiss}>
-          Dismiss
+          {t.error.dismiss}
         </button>
       )}
     </div>
