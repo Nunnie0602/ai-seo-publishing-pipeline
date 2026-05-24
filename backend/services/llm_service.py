@@ -21,6 +21,14 @@ def generate_article(system_prompt: str, user_prompt: str) -> dict:
         generation_config=genai.GenerationConfig(
             temperature=settings.llm_temperature,
             response_mime_type="application/json",
+            response_schema={
+                "type": "OBJECT",
+                "properties": {
+                    "title": {"type": "STRING"},
+                    "content_html": {"type": "STRING"},
+                },
+                "required": ["title", "content_html"],
+            },
         ),
     )
 

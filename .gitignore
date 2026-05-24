@@ -39,3 +39,6 @@ Thumbs.db
 
 # Test Result
 frontend/test_result.md
+full-stack-testcases/
+backend/test/
+revision.md

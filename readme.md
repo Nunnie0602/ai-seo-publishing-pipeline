@@ -11,47 +11,133 @@
 3. 驗證與清理 AI 輸出內容
 4. 發布至 WordPress 草稿文章
 
-本專案重點：
-
-- 穩定的 AI Output Handling
-- SEO-Oriented Prompt Engineering
-- WordPress 發文流程
-- Error Handling 與系統韌性
-- Production-Oriented 架構設計
+本專案重點：穩定的 AI Output Handling、SEO-Oriented Prompt Engineering、WordPress 發文流程、Error Handling 與系統韌性。
 
 ---
 
-# Core User Flow
+## Getting Started
+
+### 必要條件
+
+| 項目 | 版本 / 說明 |
+|---|---|
+| Python | 3.11+ |
+| Node.js | 18+ |
+| WordPress | 5.6+，REST API 與 Application Password 已啟用 |
+| Gemini API Key | [Google AI Studio](https://aistudio.google.com/) 取得 |
+
+<a id="env-vars"></a>
+
+### 環境變數
+
+複製 `backend/.env.example` 為 `backend/.env` 並填入：
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+WORDPRESS_URL=http://your-wordpress-site.local
+WORDPRESS_USERNAME=admin
+WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx
+CORS_ORIGINS=http://localhost:5173
+LLM_TEMPERATURE=0.2
+LLM_MAX_RETRIES=3
+```
+
+| 說明 | 細節 |
+|---|---|
+| 載入路徑 | 後端**固定讀取** `backend/.env`（不受執行目錄影響）；修改後需重啟 uvicorn |
+| Docker | `docker compose` 使用**根目錄** `.env`（可參考 `.env.example`） |
+| 建議模型 | 使用 `gemini-2.5-flash`；實測 `gemini-2.0-flash` 免費配額已用盡（429） |
+
+WordPress Application Password 設定見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。
+
+### 安裝依賴
+
+```bash
+cd backend && pip install -r requirements.txt
+cd ../frontend && npm install
+```
+
+<a id="start-local"></a>
+
+### 啟動服務（本機）
+
+**後端**（終端機 1）：
+
+```bash
+cd backend
+python -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**前端**（終端機 2）：
+
+```bash
+cd frontend
+npm run dev
+```
+
+- 後端：`http://127.0.0.1:8000`
+- 前端：`http://localhost:5173`
+
+### Docker Compose（可選）
+
+```bash
+docker compose up --build
+```
+
+### 健康檢查
+
+瀏覽器開啟 [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)，確認 App、WordPress、LLM 三項皆為 **OK**。
+
+命令列（JSON）：
+
+```bash
+python -c "import httpx; r=httpx.get('http://127.0.0.1:8000/health', headers={'Accept':'application/json'}); print(r.status_code, r.json())"
+```
+
+任一依賴非 OK 時 HTTP 狀態碼為 `503`。詳細規格見 [docs/api-spec.md](docs/api-spec.md)。
+
+<a id="troubleshooting"></a>
+
+### 常見啟動問題
+
+| 現象 | 處置 |
+|---|---|
+| Gemini 429 | 確認 `GEMINI_MODEL=gemini-2.5-flash`；檢查 [AI Studio](https://aistudio.google.com/) 用量 |
+| WordPress 401 | 見 [docs/wordpress-setup.md](docs/wordpress-setup.md) Troubleshooting |
+| CORS 錯誤 | 確認 `CORS_ORIGINS` 含前端實際 origin（如 `http://localhost:5173`） |
+
+---
+
+## Testing
+
+| 類型 | 說明 |
+|---|---|
+| Full-Stack Live | `python full-stack-testcases/run_full_stack_live_test.py`（真實 Gemini + WordPress，會消耗配額） |
+| Backend Mock | `backend/test/run_*_mock_test.py` |
+| 最新報告 | `full-stack-testcases/test_result_full_stack_live_*.md` |
+
+自動化測試、手動 UI 驗證、WordPress 草稿檢視與測試檢查清單，見 **[docs/testguide.md](docs/testguide.md)**。
+
+---
+
+## Core User Flow
 
 ```text
-User Input
-    ↓
-Frontend Validation
-    ↓
-Backend API
-    ↓
-Prompt Builder
-    ↓
-LLM Generation
-    ↓
-JSON Validation
-    ↓
-HTML Sanitization
-    ↓
-WordPress Draft Publishing
-    ↓
-Frontend Result Display
+User Input → Frontend Validation → Backend API → Prompt Builder
+  → LLM Generation → JSON Validation → HTML Sanitization
+  → WordPress Draft Publishing → Frontend Result Display
 ```
 
 ---
 
-# Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React / Vite |
+| Frontend | React / Vite（En / 繁中 i18n） |
 | Backend | FastAPI |
-| AI Service | Gemini API |
+| AI Service | Gemini API（`gemini-2.5-flash`，temperature 0.2，最多 3 次 retry） |
 | CMS | WordPress REST API |
 | HTML Sanitizer | bleach |
 | Deployment | Docker Compose |
@@ -59,128 +145,55 @@ Frontend Result Display
 
 ---
 
-# Functional Requirements
+## Functional Requirements
 
-# 1. SEO Content Input Form
+### 1. SEO Content Input Form
 
-## Description
+| Field | Type | UI 說明 |
+|---|---|---|
+| Topic | string | 必填 |
+| Keywords | string[] | 必填；表單為**每行一個關鍵字** |
+| Target Audience | string | 必填 |
+| Call To Action | string | 必填；最多 200 字元 |
 
-使用者可透過前端輸入 SEO 發文需求。
+前端支援 **En / 繁中** 切換（`LangToggle`）。
 
-## Required Fields
-
-| Field | Type |
-|---|---|
-| Topic | string |
-| Keywords | string[] |
-| Target Audience | string |
-| Call To Action | string |
-
-## Example Request
+**API 請求範例**：
 
 ```json
 {
   "topic": "Tainan Food Travel Guide",
-  "keywords": [
-    "Tainan food",
-    "Taiwan travel"
-  ],
+  "keywords": ["Tainan food", "Taiwan travel"],
   "target_audience": "Foreign tourists visiting Taiwan",
   "call_to_action": "Book your Tainan trip today"
 }
 ```
 
----
-
-# 2. Frontend Validation
-
-## Description
-
-前端需於送出前進行基本驗證。
-
-## Validation Rules
+### 2. Frontend Validation
 
 | Rule | Description |
 |---|---|
-| Topic Required | 不可為空 |
-| Keywords Required | 至少一組 keyword |
-| CTA Length Limit | 避免 prompt 過長 |
-| Disable Duplicate Submit | Loading 時不可重複送出 |
+| 必填欄位 | Topic、Keywords、Target Audience、Call To Action 不可為空 |
+| CTA 長度 | 最多 200 字元 |
+| 重複送出 | Loading 時禁用按鈕 |
 
-## Error Examples
+**錯誤訊息範例**（依語系）：
 
 ```text
-Topic is required.
+Topic is empty. Please enter the required text.
 ```
 
 ```text
-Please enter at least one keyword.
+主題為空。請輸入必填文字。
 ```
 
----
+### 3. Prompt Engineering
 
-# 3. Prompt Engineering Strategy
+詳見 [docs/prompt-strategy.md](docs/prompt-strategy.md)。System / User Prompt 與 `backend/utils/constants.py` 一致。
 
-## Description
+### 4–5. LLM 生成與 JSON 驗證
 
-後端將結構化資料轉換為穩定的 SEO Prompt。
-
----
-
-## System Prompt
-
-```text
-You are an SEO content writer.
-
-Requirements:
-- Return valid JSON only
-- Generate semantic HTML
-- Use <h1>, <h2>, <p>, <ul>
-- Naturally include ALL provided keywords
-- Avoid markdown
-- No script tags
-- Write coherent SEO-friendly content
-```
-
----
-
-## User Prompt Template
-
-```text
-Topic:
-{topic}
-
-Keywords:
-{keywords}
-
-Target Audience:
-{target_audience}
-
-Call To Action:
-{call_to_action}
-```
-
----
-
-## Stability Strategy
-
-| Strategy | Purpose |
-|---|---|
-| JSON Schema Validation | 防止格式錯誤 |
-| Retry Mechanism | 修復偶發不穩定輸出 |
-| Low Temperature | 提升輸出穩定性 |
-| Response Parsing | 確保 JSON-only response |
-| HTML Sanitization | 避免危險 HTML |
-
----
-
-# 4. LLM Content Generation
-
-## Description
-
-後端呼叫 LLM 生成 SEO HTML 文章。
-
-## Expected Output
+**預期 LLM 輸出**：
 
 ```json
 {
@@ -189,265 +202,108 @@ Call To Action:
 }
 ```
 
-## Requirements
-
-- JSON 格式固定
-- HTML only
-- 禁止 markdown
-- 必須包含 semantic HTML structure
-
----
-
-# 5. JSON Validation
-
-## Description
-
-於發布前驗證 LLM Output。
-
-## Validation Rules
-
-| Rule | Description |
+| 驗證 | 說明 |
 |---|---|
-| title Required | 必填 |
-| content_html Required | 必填 |
-| content_html Type | 必須為 string |
-| Invalid Response Rejection | 拒絕 malformed response |
+| title / content_html | 必填且為非空字串 |
+| 格式錯誤 | 拒絕進入發布流程 |
 
-## Goal
+穩定策略：JSON Schema、Retry、低 temperature、Response Parsing、HTML Sanitization。
 
-避免 AI 不穩定輸出造成 downstream workflow failure。
+### 6. HTML Sanitization
 
----
+使用 `bleach`。允許標籤：
 
-# 6. HTML Sanitization
+`h1`, `h2`, `h3`, `p`, `ul`, `ol`, `li`, `strong`, `em`, `a`, `br`
 
-## Description
+移除 `<script>` 與不安全屬性。
 
-發布前清理 AI 生成 HTML。
-
-## Sanitization Rules
-
-- Remove script tags
-- Remove unsafe attributes
-- 僅允許 semantic HTML tags
-
-## Library
-
-```python
-bleach
-```
-
-## Goal
-
-降低 AI-generated HTML 帶來的安全與格式風險。
-
----
-
-# 7. WordPress Draft Publishing
-
-## Description
-
-透過 WordPress REST API 建立 draft post。
-
-## WordPress REST Endpoint
+### 7. WordPress Draft Publishing
 
 ```text
-POST /wp-json/wp/v2/posts
+POST {WORDPRESS_URL}/wp-json/wp/v2/posts
 ```
 
-## Important Fields
+認證：Basic Auth + Application Password。詳見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。
 
-| Field | Description |
-|---|---|
-| title | LLM 生成標題 |
-| content | HTML 文章內容 |
-| status | draft |
+### 8–9. HTML Preview 與 Pipeline
 
-## Authentication
-
-- Basic Authentication
-- WordPress Application Password
-
-## Example Response
-
-```json
-{
-  "post_id": 123,
-  "draft_url": "...",
-  "status": "draft"
-}
-```
-
----
-
-# 8. HTML Preview
-
-## Description
-
-前端顯示 HTML Preview。
-
-## Goal
-
-模擬 CMS workflow 並提升內容可視性。
-
----
-
-# 9. Status Pipeline Display
-
-## Description
-
-前端需顯示 workflow progress state。
-
-## Example
+Pipeline 步驟（英文 UI）：
 
 ```text
-Generating article...
-Validating JSON...
-Sanitizing HTML...
-Publishing draft...
-Completed
+Generating article... → Validating JSON... → Sanitizing HTML...
+Publishing draft... → Completed
 ```
 
-## Goal
-
-提升 UX 與 workflow observability。
-
----
-
-# 10. Error Handling
-
-## Description
-
-系統需處理常見失敗情境。
-
-## Scenarios
+### 10. Error Handling
 
 | Scenario | Handling |
 |---|---|
-| Empty Input | Frontend validation |
-| LLM Timeout | Retry + Error Response |
-| Invalid JSON | Validation rejection |
-| WordPress API Failure | Error feedback |
-| HTML Validation Failure | Sanitization rejection |
+| 空欄位 | 前端驗證 |
+| LLM 失敗 | Retry + 500 錯誤訊息 |
+| JSON 無效 | 400 驗證拒絕 |
+| WordPress 失敗 | `WordPress publishing failed.` |
 
-## Example Messages
+### 11. System Logging
 
-```text
-Generation failed. Please retry.
-```
+範例：`[INFO] Building prompt` → `Calling Gemini API` → `JSON validation passed` → `HTML sanitized` → `Publishing to WordPress` → `Draft created successfully`
 
-```text
-WordPress publishing failed.
-```
+日誌檔：`backend/logs/app.log`
 
 ---
 
-# 11. System Logging
-
-## Description
-
-顯示輕量系統 log。
-
-## Example Logs
-
-```text
-[INFO] Building prompt
-[INFO] Calling Gemini API
-[INFO] JSON validation passed
-[INFO] HTML sanitized
-[INFO] Publishing to WordPress
-[INFO] Draft created successfully
-```
-
-## Goal
-
-提升 observability 並展示工程流程。
-
----
-
-# Non-Functional Requirements
-
-## Reliability
-
-- 防止 invalid AI output 進入 publishing flow
-- API failure graceful handling
-
-## Maintainability
-
-- Service-layer architecture
-- Modular backend design
-
-## Extensibility
-
-架構需支援未來擴充：
-
-- Multiple AI Providers
-- Scheduled Publishing
-- Human Review Workflow
-
----
-
-# Project Structure
+## Project Structure
 
 ```text
 ai-seo-publishing-pipeline/
 ├── README.md
+├── revision.md
 ├── .gitignore
-├── docker-compose.yml       
-├── .env.example
+├── docker-compose.yml
+├── .env.example                 # Docker 用
 ├── docs/
 │   ├── architecture.md
 │   ├── api-spec.md
 │   ├── prompt-strategy.md
-│   └── wordpress-setup.md    
-│
+│   ├── wordpress-setup.md
+│   └── testguide.md
+├── full-stack-testcases/        # Full-Stack Live 測試
 ├── backend/
 │   ├── app.py
+│   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── .env.example
-│   ├── routes/
-│   │   └── generate_route.py
+│   ├── routes/generate_route.py
 │   ├── services/
 │   │   ├── llm_service.py
 │   │   ├── prompt_service.py
 │   │   ├── validation_service.py
 │   │   ├── sanitizer_service.py
-│   │   └── wordpress_service.py   
-│   ├── models/
-│   │   └── schemas.py             
-│   ├── utils/
-│   │   ├── retry.py
-│   │   ├── parser.py
-│   │   └── constants.py
-│   ├── config/
-│   │   └── settings.py            <-- 內含 CORS 設定
-│   └── logs/
-│       └── app.log
-│
-├── frontend/                     
+│   │   ├── wordpress_service.py
+│   │   └── health_service.py
+│   ├── models/schemas.py
+│   ├── utils/{retry,parser,constants}.py
+│   ├── config/settings.py
+│   ├── test/                    # Mock 測試腳本
+│   └── logs/app.log
+├── frontend/
+│   ├── Dockerfile
 │   ├── package.json
 │   ├── vite.config.js
+│   ├── index.html
 │   ├── .env.local.example
 │   └── src/
-│       ├── app/
-│       │   ├── layout.js
-│       │   └── page.js           
+│       ├── main.jsx
+│       ├── app/{layout,page}.jsx
 │       ├── components/
-│       │   ├── SeoForm.jsx
-│       │   ├── KeywordInput.jsx
-│       │   ├── LoadingPipeline.jsx
-│       │   ├── HtmlPreview.jsx
-│       │   ├── ErrorAlert.jsx
-│       │   └── SuccessToast.jsx
-│       ├── services/
-│       │   └── api.js
-│       ├── hooks/
-│       │   └── useGenerateArticle.js 
-│       └── utils/
-│           └── validators.js
-│
-└── screenshots/
-    ├── frontend-form.png
+│       │   ├── SeoForm.jsx, KeywordInput.jsx, LangToggle.jsx
+│       │   ├── LoadingPipeline.jsx, HtmlPreview.jsx
+│       │   └── ErrorAlert.jsx, SuccessToast.jsx
+│       ├── i18n/{translations.js,LanguageContext.jsx}
+│       ├── services/api.js
+│       ├── hooks/useGenerateArticle.js
+│       └── utils/validators.js
+└── screenshots/                 # 待補截圖
+    ├── frontend-form.png        # (planned)
     ├── loading-state.png
     ├── html-preview.png
     └── wordpress-draft.png
@@ -455,114 +311,52 @@ ai-seo-publishing-pipeline/
 
 ---
 
-# API Design
+## API Design
 
-## POST /generate
+Base URL：`http://localhost:8000`。完整規格見 [docs/api-spec.md](docs/api-spec.md)。
 
-### Request
+### POST /generate
 
-```json
-{
-  "topic": "Tainan Food Travel Guide",
-  "keywords": [
-    "Tainan food",
-    "Taiwan travel"
-  ],
-  "target_audience": "Foreign tourists visiting Taiwan",
-  "call_to_action": "Book your Tainan trip today"
-}
-```
+**Request**：見上方 SEO 表單 JSON 範例。
 
----
-
-## Response
+**Success (200)**：
 
 ```json
 {
   "status": "success",
   "post_id": 123,
-  "draft_url": "...",
-  "title": "...",
-  "preview_html": "..."
+  "draft_url": "https://example.com/?p=123",
+  "title": "Generated Title",
+  "preview_html": "<h1>...</h1>"
 }
 ```
 
----
+**Error (400 / 500)**：FastAPI 回傳 `detail` 物件：
 
-# Demo Focus
-
-本專案重點：
-
-- AI SEO workflow engineering
-- Stable LLM integration
-- Prompt engineering
-- WordPress publishing automation
-- Reliable content pipeline
-- Production-oriented architecture
-
-
----
-
-# Development Timeline & Engineering Priority
-
-| Priority | Area | Score Weight | Estimated Effort | Completion Indicator |
-|---|---|---|---|---|
-| P0 | End-to-end workflow demo | 20% | 1.5 Days | 可完整建立 WordPress Draft |
-| P0 | Prompt engineering + LLM integration | 25% | 1.5 Days | 穩定輸出 valid HTML JSON |
-| P0 | Error handling + validation | 30% | 1.5 Days | Invalid input 不會 crash |
-| P1 | WordPress integration understanding | 25% | 1 Day | REST API draft publishing 成功 |
-| P1 | Frontend UX | Demo Critical | 1 Day | Loading/Error/Preview 正常 |
-| P2 | Logging + observability | Bonus | 0.5 Day | 可展示 workflow logs |
-| P2 | Docker setup + README | Bonus | 0.5 Day | 可快速本機啟動 |
-
----
-
-# Suggested 6-Day Development Schedule
-
-| Day | Focus | Deliverables | Success Criteria |
-|---|---|---|---|
-| Day 1 | Architecture setup | React + FastAPI + WordPress setup | Frontend/backend 可連線 |
-| Day 2 | Prompt engineering | Prompt builder + Gemini integration | 穩定生成 JSON |
-| Day 3 | Validation pipeline | Validation + Sanitization + Retry | Invalid output 可處理 |
-| Day 4 | WordPress publishing | REST API publishing | Draft 出現在 WordPress |
-| Day 5 | Frontend polish | Loading/Error/Preview | 完整 workflow 可操作 |
-| Day 6 | Testing & demo prep | README + Demo script + Logs | Demo 可穩定展示 |
-
----
-
-# Demo Success Indicators
-
-| Category | Demo Goal |
-|---|---|
-| Frontend | SEO form submission 正常 |
-| Backend | Prompt generation stable |
-| LLM | Semantic HTML 穩定輸出 |
-| Validation | Invalid response 不 crash |
-| WordPress | Draft article 成功建立 |
-| UX | Loading/Error state 清楚 |
-| Architecture | Service separation 可解釋 |
-
----
-# 開發策略重點
-
-## 優先確保：
-
-```text
-Frontend
-→ Backend
-→ LLM
-→ Validation
-→ WordPress Draft
+```json
+{
+  "detail": {
+    "status": "error",
+    "message": "Generation failed. Please retry."
+  }
+}
 ```
 
-完整穩定可 demo。
+### GET /health
+
+- 預設：HTML 狀態頁（App / WordPress / LLM）
+- `Accept: application/json`：JSON 格式
+- 任一依賴 ERROR → HTTP `503`
 
 ---
 
-## Demo 成功關鍵
+## Related Documentation
 
-- 不 crash
-- Loading 明確
-- Error message 清楚
-- WordPress draft 可成功建立
-- 能解釋 Prompt 與 Validation 設計原因
+| 文件 | 說明 |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | 系統架構 |
+| [docs/api-spec.md](docs/api-spec.md) | API 規格 |
+| [docs/prompt-strategy.md](docs/prompt-strategy.md) | Prompt 策略 |
+| [docs/wordpress-setup.md](docs/wordpress-setup.md) | WordPress 設定 |
+| [docs/testguide.md](docs/testguide.md) | Full-Stack 與手動測試流程 |
+
