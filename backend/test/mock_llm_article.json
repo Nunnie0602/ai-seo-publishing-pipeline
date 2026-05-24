@@ -1,4 +1,0 @@
-{
-  "title": "[MOCK] 高雄美食旅遊指南（Mock）",
-  "content_html": "<h1>高雄美食旅遊指南</h1><p>此內容由 <strong>backend/test</strong> mock 資料產生，對應前端表單主題「高雄美食旅遊指南（Mock）」，用於驗證發布流程，非 LLM 生成。</p><h2>關鍵字</h2><ul><li>高雄美食</li><li>台灣旅遊</li></ul><p><a href=\"https://example.com\">立即規劃你的高雄之旅</a></p>"
-}

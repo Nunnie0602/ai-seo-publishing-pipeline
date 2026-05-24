@@ -1,4 +1,0 @@
-{
-  "title": "[MOCK] Sanitizer 測試",
-  "content_html": "<h1>安全測試</h1><script>alert('xss')</script><p onclick=\"evil()\">正常段落</p><iframe src=\"https://evil.example\"></iframe>"
-}
