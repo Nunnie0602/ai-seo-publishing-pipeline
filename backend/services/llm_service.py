@@ -24,8 +24,20 @@ def generate_article(system_prompt: str, user_prompt: str) -> dict:
             response_schema={
                 "type": "OBJECT",
                 "properties": {
-                    "title": {"type": "STRING"},
-                    "content_html": {"type": "STRING"},
+                    "title": {
+                        "type": "STRING",
+                        "description": (
+                            "Post title for WordPress metadata. "
+                            "Must not appear in content_html."
+                        ),
+                    },
+                    "content_html": {
+                        "type": "STRING",
+                        "description": (
+                            "Article body HTML only. No <h1> and no post title. "
+                            "Start with <p>; use <h2> for section headings."
+                        ),
+                    },
                 },
                 "required": ["title", "content_html"],
             },

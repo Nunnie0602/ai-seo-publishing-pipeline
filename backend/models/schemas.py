@@ -9,8 +9,12 @@ class GenerateRequest(BaseModel):
 
 
 class LLMArticleOutput(BaseModel):
-    title: str = Field(..., min_length=1)
-    content_html: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, description="WordPress post title (metadata)")
+    content_html: str = Field(
+        ...,
+        min_length=1,
+        description="Article body HTML; no <h1>, starts with intro paragraph",
+    )
 
 
 class GenerateSuccessResponse(BaseModel):
