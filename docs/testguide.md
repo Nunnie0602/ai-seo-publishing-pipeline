@@ -71,17 +71,11 @@ BACKEND_BASE_URL=http://127.0.0.1:8000 FRONTEND_BASE_URL=http://127.0.0.1:5173 \
 
 
 | 階段 | 說明 |
-
 |---|---|
-
 | T01–T04 | 前端 mock 表單 → API 欄位轉換 → schema 驗證 |
-
 | T05–T08 | 環境變數、LLM / WordPress health check |
-
 | T09–T14 | **真實 Gemini API** → JSON 驗證 → HTML 消毒 → WordPress 草稿 |
-
 | T15–T16 | 可選：已啟動的前後端 HTTP 連線 |
-
 | T18 | 測試後 Gemini 配額探測 |
 
 
@@ -95,18 +89,11 @@ BACKEND_BASE_URL=http://127.0.0.1:8000 FRONTEND_BASE_URL=http://127.0.0.1:5173 \
 
 
 | 檔案 | 內容 |
-
 |---|---|
-
 | `test_result_full_stack_live_YYYY-MM-DD.md` | 測試報告 |
-
 | `live_llm_article_YYYY-MM-DD.json` | LLM 輸出快照 |
-
 | `generate_response_YYYY-MM-DD.json` | `/generate` 完整回應 |
-
 | `wordpress_post_YYYY-MM-DD.json` | WordPress 草稿讀回驗證 |
-
-
 
 > **注意**：T09 會消耗 Gemini API 配額並在 WordPress 建立真實草稿，請勿在 CI 中頻繁執行。
 
@@ -122,8 +109,6 @@ BACKEND_BASE_URL=http://127.0.0.1:8000 FRONTEND_BASE_URL=http://127.0.0.1:5173 \
 
 ### 2.1 開啟前端表單
 
-
-
 1. 確認 [README — 啟動服務](../README.md#start-local) 已完成
 
 2. 瀏覽器前往 [http://localhost:5173](http://localhost:5173)
@@ -135,48 +120,25 @@ BACKEND_BASE_URL=http://127.0.0.1:8000 FRONTEND_BASE_URL=http://127.0.0.1:5173 \
 ### 2.2 填寫表單
 
 
-
 | 欄位 | 範例值 |
-
 |---|---|
-
 | Topic | 高雄美食旅遊指南 |
-
 | Keywords | 高雄美食、台灣旅遊（每行一個） |
-
-| Target Audience | 來台觀光的外國旅客 |
-
+| Target Audience | 來台觀光的旅客 |
 | Call To Action | 立即規劃你的高雄之旅 |
-
 
 
 ### 2.3 送出並觀察 Pipeline
 
-
-
 點擊生成按鈕後，前端應依序顯示：
-
-
-
 ```text
 
-Generating article...
-
-Validating JSON...
-
-Sanitizing HTML...
-
-Publishing draft...
-
-Completed
+Generating articl → Validating JSON → Sanitizing HTML → Publishing draft → Completed
 
 ```
 
 
-
 成功後頁面會顯示：
-
-
 
 - 文章標題
 
@@ -188,16 +150,10 @@ Completed
 
 ### 2.4 錯誤情境
 
-
-
 | 現象 | 可能原因 |
-
 |---|---|
-
 | `Generation failed. Please retry.` | Gemini 配額用盡或 API Key 無效 |
-
 | `WordPress publishing failed.` | Application Password 錯誤或 REST API 401 |
-
 | 前端無法連線 | 後端未啟動或 CORS 設定不符（見 [README — 常見啟動問題](../README.md#troubleshooting)） |
 
 
@@ -209,13 +165,10 @@ Completed
 ## 3. WordPress 檢視生成結果
 
 
-
 ### 3.1 從前端連結
 
 
-
 生成成功後，點擊回應中的 **draft_url**（例如 `http://ai-seo-cy310.local/?p=11`）。
-
 
 
 ### 3.2 從 WordPress 後台
@@ -347,21 +300,13 @@ print(r.status_code, r.json().get('status'), r.json().get('title',{}).get('rende
 
 
 | 文件 | 說明 |
-
 |---|---|
-
 | [README.md](../README.md) | 專案說明、Getting Started、API 摘要 |
-
 | [architecture.md](./architecture.md) | 系統架構 |
-
 | [api-spec.md](./api-spec.md) | API 規格 |
-
 | [wordpress-setup.md](./wordpress-setup.md) | WordPress 設定 |
-
 | [prompt-strategy.md](./prompt-strategy.md) | Prompt 策略 |
-
 | [revision.md](../revision.md) | Full-Stack 實測變更紀錄 |
-
 | `full-stack-testcases/test_result_full_stack_live_*.md` | 最新測試報告 |
 
 

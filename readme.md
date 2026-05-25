@@ -152,7 +152,7 @@ User Input → Frontend Validation → Backend API → Prompt Builder
 | Field | Type | UI 說明 |
 |---|---|---|
 | Topic | string | 必填 |
-| Keywords | string[] | 必填；表單為**每行一個關鍵字** |
+| Keywords | string[] | 必填；表單為**每列一個關鍵字** |
 | Target Audience | string | 必填 |
 | Call To Action | string | 必填；最多 200 字元 |
 
@@ -191,7 +191,7 @@ Topic is empty. Please enter the required text.
 
 詳見 [docs/prompt-strategy.md](docs/prompt-strategy.md)。System / User Prompt 與 `backend/utils/constants.py` 一致。
 
-### 4–5. LLM 生成與 JSON 驗證
+### 4. LLM 生成與 JSON 驗證
 
 **預期 LLM 輸出**：
 
@@ -207,9 +207,9 @@ Topic is empty. Please enter the required text.
 | title / content_html | 必填且為非空字串 |
 | 格式錯誤 | 拒絕進入發布流程 |
 
-穩定策略：JSON Schema、Retry、低 temperature、Response Parsing、HTML Sanitization。
+穩定策略：JSON Schema、Retry、低 temperature、Response Parsing。
 
-### 6. HTML Sanitization
+### 5. HTML Sanitization
 
 使用 `bleach`。允許標籤：
 
@@ -217,7 +217,7 @@ Topic is empty. Please enter the required text.
 
 移除 `<script>` 與不安全屬性。
 
-### 7. WordPress Draft Publishing
+### 6. WordPress Draft Publishing
 
 ```text
 POST {WORDPRESS_URL}/wp-json/wp/v2/posts
@@ -225,7 +225,7 @@ POST {WORDPRESS_URL}/wp-json/wp/v2/posts
 
 認證：Basic Auth + Application Password。詳見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。
 
-### 8–9. HTML Preview 與 Pipeline
+### 7. HTML Preview 與 Pipeline
 
 Pipeline 步驟（英文 UI）：
 
@@ -303,10 +303,6 @@ ai-seo-publishing-pipeline/
 │       ├── hooks/useGenerateArticle.js
 │       └── utils/validators.js
 └── screenshots/                 # 待補截圖
-    ├── frontend-form.png        # (planned)
-    ├── loading-state.png
-    ├── html-preview.png
-    └── wordpress-draft.png
 ```
 
 ---

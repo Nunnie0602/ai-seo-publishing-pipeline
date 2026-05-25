@@ -63,7 +63,7 @@ export const translations = {
     lang: { en: "En", zh: "繁中" },
     layout: {
       title: "AI SEO 內容產生器",
-      subtitle: "產生 SEO 文章並發佈為 WordPress 草稿",
+      subtitle: "產生 SEO 文章為 WordPress 草稿",
     },
     field: {
       topic: "主題",
@@ -79,7 +79,7 @@ export const translations = {
       callToAction: "立即預訂您的高雄之旅",
     },
     button: {
-      generate: "產生草稿並發佈至 WordPress",
+      generate: "產生草稿至 WordPress",
       processing: "處理中...",
     },
     alert: {
