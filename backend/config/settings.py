@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     llm_temperature: float = 0.2
     llm_max_retries: int = 3
+    llm_request_timeout_seconds: int = 60
+    wp_max_retries: int = 3
 
     wordpress_url: str = ""
     wordpress_username: str = ""

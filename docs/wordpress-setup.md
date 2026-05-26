@@ -44,4 +44,5 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx
 | 401 Unauthorized | 確認 Application Password 正確；`WORDPRESS_USERNAME` 須為登入 **slug**（如 `admin`），非顯示名稱（如 `Admin`） |
 | 使用了登入密碼 | REST 僅接受 Application Password，不能使用後台登入密碼 |
 | 403 Forbidden | 確認使用者有 `edit_posts` 權限 |
+| 502 / 503 / 504 | 後端會自動重試；若持續失敗請檢查主機、外掛或反向代理 |
 | REST API disabled | 檢查 permalink 與 REST API 外掛設定 |

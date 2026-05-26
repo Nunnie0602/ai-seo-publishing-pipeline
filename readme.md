@@ -41,6 +41,8 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx
 CORS_ORIGINS=http://localhost:5173
 LLM_TEMPERATURE=0.2
 LLM_MAX_RETRIES=3
+LLM_REQUEST_TIMEOUT_SECONDS=60
+WP_MAX_RETRIES=3
 ```
 
 | 說明 | 細節 |
@@ -48,6 +50,7 @@ LLM_MAX_RETRIES=3
 | 載入路徑 | 後端**固定讀取** `backend/.env`（不受執行目錄影響）；修改後需重啟 uvicorn |
 | Docker | `docker compose` 使用**根目錄** `.env`（可參考 `.env.example`） |
 | 建議模型 | 使用 `gemini-2.5-flash`；實測 `gemini-2.0-flash` 免費配額已用盡（429） |
+| LLM 逾時 / WP 重試 | `LLM_REQUEST_TIMEOUT_SECONDS` 預設 60s；`WP_MAX_RETRIES` 預設 3。修改後需重啟 uvicorn |
 
 WordPress Application Password 設定見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。
 
@@ -103,7 +106,7 @@ python -c "import httpx; r=httpx.get('http://127.0.0.1:8000/health', headers={'A
 
 | 現象 | 處置 |
 |---|---|
-| Gemini 429 | 確認 `GEMINI_MODEL=gemini-2.5-flash`；檢查 [AI Studio](https://aistudio.google.com/) 用量 |
+| Gemini 429 | 後端會先 retry，仍失敗才回 500；確認 `GEMINI_MODEL=gemini-2.5-flash`；檢查 [AI Studio](https://aistudio.google.com/) 用量 |
 | WordPress 401 | 見 [docs/wordpress-setup.md](docs/wordpress-setup.md) Troubleshooting |
 | CORS 錯誤 | 確認 `CORS_ORIGINS` 含前端實際 origin（如 `http://localhost:5173`） |
 
@@ -113,9 +116,8 @@ python -c "import httpx; r=httpx.get('http://127.0.0.1:8000/health', headers={'A
 
 | 類型 | 說明 |
 |---|---|
-| Full-Stack Live | `python full-stack-testcases/run_full_stack_live_test.py`（真實 Gemini + WordPress，會消耗配額） |
-| Backend Mock | `backend/test/run_*_mock_test.py` |
-| 最新報告 | `full-stack-testcases/test_result_full_stack_live_*.md` |
+| Full-Stack Live | 真實 Gemini + WordPress（會消耗配額）；見 [docs/testguide.md](docs/testguide.md) §1 |
+| Backend Mock | LLM 逾時／分類 retry、WP retry；見 [docs/testguide.md](docs/testguide.md) §1.4 |
 
 自動化測試、手動 UI 驗證、WordPress 草稿檢視與測試檢查清單，見 **[docs/testguide.md](docs/testguide.md)**。
 
@@ -137,7 +139,7 @@ User Input → Frontend Validation → Backend API → Prompt Builder
 |---|---|
 | Frontend | React / Vite（En / 繁中 i18n） |
 | Backend | FastAPI |
-| AI Service | Gemini API（`gemini-2.5-flash`，temperature 0.2，最多 3 次 retry） |
+| AI Service | Gemini API（`gemini-2.5-flash`，temperature 0.2；單次逾時 60s；timeout／429／5xx 等最多 3 次 retry；401/400 不重試） |
 | CMS | WordPress REST API |
 | HTML Sanitizer | bleach |
 | Deployment | Docker Compose |
@@ -207,7 +209,7 @@ Topic is empty. Please enter the required text.
 | title / content_html | 必填且為非空字串 |
 | 格式錯誤 | 拒絕進入發布流程 |
 
-穩定策略：JSON Schema、Retry、低 temperature、Response Parsing。
+穩定策略：JSON Schema、分類 Retry（含逾時）、低 temperature、Response Parsing。
 
 ### 5. HTML Sanitization
 
@@ -223,7 +225,7 @@ Topic is empty. Please enter the required text.
 POST {WORDPRESS_URL}/wp-json/wp/v2/posts
 ```
 
-認證：Basic Auth + Application Password。詳見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。
+認證：Basic Auth + Application Password。詳見 [docs/wordpress-setup.md](docs/wordpress-setup.md)。發布對 502/503/504、連線逾時有限重試（`WP_MAX_RETRIES`）；401/400/403 不重試。
 
 ### 7. HTML Preview 與 Pipeline
 
@@ -239,15 +241,15 @@ Publishing draft... → Completed
 | Scenario | Handling |
 |---|---|
 | 空欄位 | 前端驗證 |
-| LLM 失敗 | Retry + 500 錯誤訊息 |
+| LLM 失敗 | timeout／429／5xx／JSON 解析錯誤 → 分類 retry（最多 `LLM_MAX_RETRIES`）；401/400 不重試；仍失敗 → 500 |
 | JSON 無效 | 400 驗證拒絕 |
-| WordPress 失敗 | `WordPress publishing failed.` |
+| WordPress 失敗 | 502/503/504、Timeout、ConnectError → retry；401/400/403 不重試；仍失敗 → `WordPress publishing failed.` |
 
 ### 11. System Logging
 
 範例：`[INFO] Building prompt` → `Calling Gemini API` → `JSON validation passed` → `HTML sanitized` → `Publishing to WordPress` → `Draft created successfully`
 
-日誌檔：`backend/logs/app.log`
+日誌目錄：`backend/logs/`（執行期產出，未納入版控）
 
 ---
 
@@ -256,7 +258,6 @@ Publishing draft... → Completed
 ```text
 ai-seo-publishing-pipeline/
 ├── README.md
-├── revision.md
 ├── .gitignore
 ├── docker-compose.yml
 ├── .env.example                 # Docker 用
@@ -266,7 +267,6 @@ ai-seo-publishing-pipeline/
 │   ├── prompt-strategy.md
 │   ├── wordpress-setup.md
 │   └── testguide.md
-├── full-stack-testcases/        # Full-Stack Live 測試
 ├── backend/
 │   ├── app.py
 │   ├── Dockerfile
@@ -281,10 +281,9 @@ ai-seo-publishing-pipeline/
 │   │   ├── wordpress_service.py
 │   │   └── health_service.py
 │   ├── models/schemas.py
-│   ├── utils/{retry,parser,constants}.py
+│   ├── utils/{retry,retry_policy,parser,constants}.py
 │   ├── config/settings.py
-│   ├── test/                    # Mock 測試腳本
-│   └── logs/app.log
+│   └── logs/                    # 執行期日誌（*.log 未納入版控）
 ├── frontend/
 │   ├── Dockerfile
 │   ├── package.json

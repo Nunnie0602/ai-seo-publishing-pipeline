@@ -45,7 +45,7 @@ Call To Action:
 | Strategy | Purpose |
 |---|---|
 | JSON Schema Validation | 防止格式錯誤 |
-| Retry Mechanism | 修復偶發不穩定輸出 |
+| Retry Mechanism | LLM：逾時 + 分類 retry（429/5xx 等）；WP：502/503/504 與連線錯誤有限 retry |
 | Low Temperature | 提升輸出穩定性 |
 | Response Parsing | 確保 JSON-only response |
 | HTML Sanitization | 避免危險 HTML |
