@@ -234,3 +234,13 @@ body {
   border-radius: 4px;
   background: #fafafa;
 }
+
+.preview__article-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.preview__content > div > :first-child {
+  margin-top: 0;
+}

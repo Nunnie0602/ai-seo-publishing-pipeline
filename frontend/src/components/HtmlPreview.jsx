@@ -8,11 +8,10 @@ export default function HtmlPreview({ title, html }) {
   return (
     <section className="preview">
       <h3>{t.preview.title}</h3>
-      {title && <p className="preview__title">{title}</p>}
-      <div
-        className="preview__content"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className="preview__content">
+        {title && <h1 className="preview__article-title">{title}</h1>}
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
     </section>
   );
 }
