@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 
 import google.generativeai as genai
@@ -6,8 +7,20 @@ from config.settings import settings
 from utils.constants import SYSTEM_PROMPT
 from utils.parser import extract_json_from_response
 from utils.retry import with_retry
+from utils.retry_policy import is_llm_retryable
 
 logger = logging.getLogger(__name__)
+
+
+def _run_with_timeout(fn, timeout_seconds: int):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(fn)
+        try:
+            return future.result(timeout=timeout_seconds)
+        except concurrent.futures.TimeoutError as exc:
+            raise TimeoutError(
+                f"LLM request timed out after {timeout_seconds}s"
+            ) from exc
 
 
 def generate_article(system_prompt: str, user_prompt: str) -> dict:
@@ -46,12 +59,20 @@ def generate_article(system_prompt: str, user_prompt: str) -> dict:
 
     def _call() -> dict:
         logger.info("[INFO] Calling Gemini API")
-        response = model.generate_content(user_prompt)
-        text = response.text or ""
-        return extract_json_from_response(text)
+
+        def _generate() -> dict:
+            response = model.generate_content(user_prompt)
+            text = response.text or ""
+            return extract_json_from_response(text)
+
+        return _run_with_timeout(
+            _generate,
+            timeout_seconds=settings.llm_request_timeout_seconds,
+        )
 
     return with_retry(
         _call,
         max_attempts=settings.llm_max_retries,
         label="LLM generation",
+        retry_on=is_llm_retryable,
     )
